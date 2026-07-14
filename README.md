@@ -1,44 +1,45 @@
 # llama-amd-api
 
-Docker-контейнер с [llama.cpp](https://github.com/ggml-org/llama.cpp) HTTP API (OpenAI-совместимый) для Linux-сервера с AMD APU (встроенная графика Radeon, Vulkan/RADV).
+Docker container exposing the [llama.cpp](https://github.com/ggml-org/llama.cpp) HTTP API (OpenAI-compatible) for a Linux server with an AMD APU (integrated Radeon graphics, Vulkan/RADV).
 
-При **первом** старте контейнер собирает `llama-server` из запечённых в образ исходников (`-DGGML_VULKAN=ON` + `-march=native` под CPU сервера) и скачивает GGUF-модель с Hugging Face. Повторные старты идемпотентны: бинарник и модель кэшируются на volume'ах, рестарт мгновенный.
+On the **first** start the container builds `llama-server` from sources baked into the image (`-DGGML_VULKAN=ON` + `-march=native` for the host CPU) and downloads a GGUF model from Hugging Face. Subsequent starts are idempotent: the binary and the model are cached on volumes, so restarts are instant.
 
-## Запуск
+## Run
 
 ```sh
-cp .env.example .env    # настроить модель, порт и т.д.
+cp .env.example .env    # set model, port, etc.
 docker compose up -d
-docker compose logs -f  # первый старт: сборка ~5–15 мин + скачивание модели
+docker compose logs -f  # first start: ~5-15 min build + model download
 curl http://localhost:8080/health
 ```
 
-Встроенный веб-интерфейс llama.cpp доступен на http://localhost:8080.
+The built-in llama.cpp web UI is available at http://localhost:8080.
 
-## Конфигурация (переменные окружения)
+## Configuration (environment variables)
 
-Любой CLI-флаг llama-server имеет env-эквивалент `LLAMA_ARG_*`. Основные:
+Every llama-server CLI flag has an `LLAMA_ARG_*` env equivalent. The common ones:
 
-| Переменная | По умолчанию | Описание |
+| Variable | Default | Description |
 |---|---|---|
-| `LLAMA_ARG_HF_REPO` | `ggml-org/gemma-3-4b-it-GGUF:Q4_K_M` | Модель с Hugging Face `<user>/<repo>[:<quant>]` |
-| `LLAMA_ARG_PORT` | `8080` | Порт API |
-| `LLAMA_ARG_CTX_SIZE` | `8192` | Размер контекста |
-| `LLAMA_ARG_N_GPU_LAYERS` | `999` | Слои на GPU (`0` — только CPU) |
-| `HF_TOKEN` | – | Токен HF для приватных репо |
-| `LLAMA_EXTRA_ARGS` | – | Доп. CLI-аргументы llama-server |
-| `LLAMA_CPP_VERSION` | `b9993` | Релиз llama.cpp (build-arg, требует `docker compose build`) |
+| `LLAMA_ARG_HF_REPO` | `ggml-org/gemma-3-4b-it-GGUF:Q4_K_M` | Hugging Face model `<user>/<repo>[:<quant>]` |
+| `LLAMA_ARG_PORT` | `8080` | API port |
+| `LLAMA_ARG_CTX_SIZE` | `8192` | Context size |
+| `LLAMA_ARG_N_GPU_LAYERS` | `999` | Layers offloaded to GPU (`0` = CPU only) |
+| `HF_TOKEN` | – | HF token for private repos |
+| `LLAMA_EXTRA_ARGS` | – | Extra llama-server CLI arguments |
+| `LLAMA_CPP_VERSION` | `b9993` | llama.cpp release (build arg, requires `docker compose build`) |
 
-## GPU на целевом сервере
+## GPU on the target server
 
-Базовый `compose.yml` работает без GPU (CPU-fallback) — это удобно для локальной разработки, т.к. `/dev/dri` есть только на реальном Linux-хосте с видеокартой (под Docker Desktop на Windows/macOS его нет). Чтобы задействовать AMD iGPU через Vulkan/RADV, на сервере добавьте overlay:
+The base `compose.yml` runs without a GPU (CPU fallback), which is convenient for local development, because `/dev/dri` only exists on a real Linux host with a graphics device (it is absent under Docker Desktop on Windows/macOS). To use the AMD iGPU through Vulkan/RADV, add the overlay on the server:
 
 ```sh
 docker compose -f compose.yml -f compose.gpu.yml up -d
 ```
 
-Overlay пробрасывает `/dev/dri`; контейнер работает от root, поэтому доп. группы не нужны. Проверить, что GPU подхватился, можно по логу llama-server — строка `ggml_vulkan: ... AMD Radeon ... (RADV ...)` вместо `llvmpipe`.
+The overlay passes through `/dev/dri`; the container runs as root, so no extra groups are needed. To confirm the GPU was picked up, check the llama-server log for `ggml_vulkan: ... AMD Radeon ... (RADV ...)` instead of `llvmpipe`.
 
-## Заметки
-- **Пересборка llama.cpp**: удалить volume — `docker compose down && docker volume rm llama-amd-api_llama-build && docker compose up -d`.
-- **Debian, а не Alpine**: upstream llama.cpp тестируется только на glibc (на musl были баги [#8762](https://github.com/ggml-org/llama.cpp/issues/8762), [#11308](https://github.com/ggml-org/llama.cpp/issues/11308)); с toolchain в образе экономия Alpine ~10%. В trixie свежая Mesa 25.x (RADV для RDNA3).
+## Notes
+
+- **Rebuild llama.cpp**: remove the volume — `docker compose down && docker volume rm llama-amd-api_llama-build && docker compose up -d`.
+- **Debian, not Alpine**: upstream llama.cpp is tested only against glibc (musl had bugs [#8762](https://github.com/ggml-org/llama.cpp/issues/8762), [#11308](https://github.com/ggml-org/llama.cpp/issues/11308)); with the toolchain in the image Alpine would only save ~10%. trixie also ships a recent Mesa 25.x (RADV for RDNA3).
