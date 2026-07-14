@@ -6,10 +6,9 @@ services:
         LLAMA_CPP_VERSION: ${LLAMA_CPP_VERSION:-b9993}
     image: llama-amd-api:${LLAMA_CPP_VERSION:-b9993}
     restart: unless-stopped
-    # AMD iGPU for the Vulkan/RADV backend. Comment out on hosts without a GPU
-    # (llama.cpp falls back to CPU automatically).
-    devices:
-      - /dev/dri:/dev/dri
+    # For the AMD iGPU / Vulkan backend, add the GPU overlay on the server:
+    #   docker compose -f compose.yml -f compose.gpu.yml up -d
+    # Without it llama.cpp runs on CPU (used for local dev on hosts without /dev/dri).
     environment:
       LLAMA_ARG_HF_REPO: ${LLAMA_ARG_HF_REPO:-ggml-org/gemma-3-4b-it-GGUF:Q4_K_M}
       LLAMA_ARG_PORT: ${LLAMA_ARG_PORT:-8080}
@@ -18,7 +17,7 @@ services:
       HF_TOKEN: ${HF_TOKEN:-}
       LLAMA_EXTRA_ARGS: ${LLAMA_EXTRA_ARGS:-}
     ports:
-      - "${LLAMA_ARG_PORT:-8080}:${LLAMA_ARG_PORT:-8080}"
+      - "${LLAMA_ARG_PORT:-18080}:${LLAMA_ARG_PORT:-8080}"
     volumes:
       - llama-build:/opt/llama.cpp/build
       - llama-models:/models

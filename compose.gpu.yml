@@ -1,0 +1,9 @@
+# GPU passthrough overlay for the target AMD server. Use together with the base
+# file so the AMD iGPU is exposed to the Vulkan/RADV backend:
+#   docker compose -f compose.yml -f compose.gpu.yml up -d
+# Requires /dev/dri on the host (present only on a real Linux machine with a GPU;
+# not available under Docker Desktop on Windows/macOS).
+services:
+  llama:
+    devices:
+      - /dev/dri:/dev/dri

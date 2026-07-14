@@ -13,6 +13,8 @@ docker compose logs -f  # первый старт: сборка ~5–15 мин +
 curl http://localhost:8080/health
 ```
 
+Встроенный веб-интерфейс llama.cpp доступен на http://localhost:8080.
+
 ## Конфигурация (переменные окружения)
 
 Любой CLI-флаг llama-server имеет env-эквивалент `LLAMA_ARG_*`. Основные:
@@ -27,8 +29,16 @@ curl http://localhost:8080/health
 | `LLAMA_EXTRA_ARGS` | – | Доп. CLI-аргументы llama-server |
 | `LLAMA_CPP_VERSION` | `b9993` | Релиз llama.cpp (build-arg, требует `docker compose build`) |
 
-## Заметки
+## GPU на целевом сервере
 
-- **GPU**: в контейнер пробрасывается `/dev/dri`; контейнер работает от root, поэтому доп. группы не нужны. Без GPU llama.cpp автоматически откатывается на CPU.
+Базовый `compose.yml` работает без GPU (CPU-fallback) — это удобно для локальной разработки, т.к. `/dev/dri` есть только на реальном Linux-хосте с видеокартой (под Docker Desktop на Windows/macOS его нет). Чтобы задействовать AMD iGPU через Vulkan/RADV, на сервере добавьте overlay:
+
+```sh
+docker compose -f compose.yml -f compose.gpu.yml up -d
+```
+
+Overlay пробрасывает `/dev/dri`; контейнер работает от root, поэтому доп. группы не нужны. Проверить, что GPU подхватился, можно по логу llama-server — строка `ggml_vulkan: ... AMD Radeon ... (RADV ...)` вместо `llvmpipe`.
+
+## Заметки
 - **Пересборка llama.cpp**: удалить volume — `docker compose down && docker volume rm llama-amd-api_llama-build && docker compose up -d`.
 - **Debian, а не Alpine**: upstream llama.cpp тестируется только на glibc (на musl были баги [#8762](https://github.com/ggml-org/llama.cpp/issues/8762), [#11308](https://github.com/ggml-org/llama.cpp/issues/11308)); с toolchain в образе экономия Alpine ~10%. В trixie свежая Mesa 25.x (RADV для RDNA3).

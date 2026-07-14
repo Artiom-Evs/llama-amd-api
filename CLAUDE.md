@@ -6,7 +6,7 @@ Docker container serving the llama.cpp HTTP API (OpenAI-compatible) on a Linux s
 
 - `Dockerfile` — `debian:trixie-slim` + toolchain + Vulkan/RADV runtime; pinned llama.cpp sources (build-arg `LLAMA_CPP_VERSION`) are baked into `/opt/llama.cpp/src`. glibc is deliberate — do not switch to Alpine/musl (upstream llama.cpp is glibc-only tested).
 - `entrypoint.sh` — idempotent startup: compiles `llama-server` only if `$BUILD_DIR/bin/llama-server` is missing (cached on the `llama-build` volume, `-march=native`), then `exec llama-server`. Model download is NOT scripted here — llama-server's built-in `-hf` handles it, cached in `LLAMA_CACHE=/models` (`llama-models` volume). Keep it POSIX sh with LF endings (enforced by `.gitattributes`).
-- `compose.yml` — passes `/dev/dri` for the iGPU; runs as root so no `group_add` is needed.
+- `compose.yml` — base stack (llama only), runs on CPU anywhere; the web UI is llama.cpp's own built-in server UI. `compose.gpu.yml` — overlay that adds the `/dev/dri` device for the AMD iGPU; used on the server via `docker compose -f compose.yml -f compose.gpu.yml up -d`. GPU passthrough is kept out of the base file because `/dev/dri` does not exist under Docker Desktop (Windows/macOS dev).
 
 ## Conventions
 
