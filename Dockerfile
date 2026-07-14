@@ -38,7 +38,8 @@ ENV SRC_DIR=/opt/llama.cpp/src \
     HF_HOME=/models/hf \
     LLAMA_ARG_HOST=0.0.0.0 \
     LLAMA_ARG_PORT=8080 \
-    LLAMA_ARG_N_GPU_LAYERS=999
+    LLAMA_ARG_N_GPU_LAYERS=999 \
+    LLAMA_ARG_API_PREFIX=
 
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
