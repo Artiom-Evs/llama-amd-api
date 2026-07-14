@@ -5,6 +5,8 @@ services:
       args:
         LLAMA_CPP_VERSION: ${LLAMA_CPP_VERSION:-b9993}
     image: llama-amd-api:${LLAMA_CPP_VERSION:-b9993}
+    # Use the pre-published image from Docker Hub instead of building locally:
+    #image: artiomevs/llama-amd-api:latest
     restart: unless-stopped
     # For the AMD iGPU / Vulkan backend, add the GPU overlay on the server:
     #   docker compose -f compose.yml -f compose.gpu.yml up -d
